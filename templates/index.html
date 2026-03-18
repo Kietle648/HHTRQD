@@ -7,633 +7,499 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="bg-orb orb-1"></div>
-    <div class="bg-orb orb-2"></div>
-    <div class="bg-orb orb-3"></div>
+    <div class="page-shell">
+        <aside class="sidebar">
+            <div class="sidebar-top">
+                <p class="sidebar-eyebrow">DSS AHP + ML</p>
+                <h2>Cấu hình hệ thống</h2>
+                <p class="sidebar-desc">Giữ các bộ lọc ở thanh bên cho gọn màn hình. Khu vực chính chỉ tập trung nhập ma trận tiêu chí và xem kết quả theo đúng luồng tính toán.</p>
+            </div>
 
-    <form method="POST">
-        <div class="page-shell">
-            <aside class="sidebar">
-                <div class="brand-box glow-card">
-                    <div class="brand-topline">
-                        <span class="eyebrow">DSS • Flask UI</span>
-                        <span class="brand-pill">AHP + ML</span>
-                    </div>
-                    <h2>Ra quyết định thông minh cho sản phẩm chủ lực</h2>
-                    <p class="sidebar-muted">
-                        Giao diện mới giữ nguyên chức năng, nhưng được làm nổi bật hơn với phong cách gradient, glassmorphism và biểu đồ trực quan.
-                    </p>
-
-                    <div class="brand-mini-grid">
-                        <div class="brand-mini-card">
-                            <span>Top N</span>
-                            <strong>{{ form_data.top_n }}</strong>
-                        </div>
-                        <div class="brand-mini-card">
-                            <span>Dự báo</span>
-                            <strong>{{ '1 tháng' if form_data.horizon == '1m' else '3 tháng' }}</strong>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="sidebar-section glow-card">
-                    <div class="section-title-row">
-                        <h3>Cấu hình hệ thống</h3>
-                        <span class="chip">Live Config</span>
-                    </div>
-
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Thời gian bắt đầu</label>
-                            <select name="start_month" required>
+            <form method="POST" id="mainForm" class="sidebar-form">
+                <div class="sidebar-card">
+                    <div class="form-group">
+                        <label>Thời gian bắt đầu</label>
+                        <div class="select-wrap">
+                            <select name="start_month" id="startMonth">
                                 {% for month in months %}
                                 <option value="{{ month }}" {% if form_data.start_month == month %}selected{% endif %}>{{ month }}</option>
                                 {% endfor %}
                             </select>
+                            <span class="select-arrow"></span>
                         </div>
+                    </div>
 
-                        <div class="form-group">
-                            <label>Thời gian kết thúc</label>
-                            <select name="end_month" required>
+                    <div class="form-group">
+                        <label>Thời gian kết thúc</label>
+                        <div class="select-wrap">
+                            <select name="end_month" id="endMonth">
                                 {% for month in months %}
                                 <option value="{{ month }}" {% if form_data.end_month == month %}selected{% endif %}>{{ month }}</option>
                                 {% endfor %}
                             </select>
+                            <span class="select-arrow"></span>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label>Top N phương án</label>
-                        <input type="number" name="top_n" min="1" max="100" value="{{ form_data.top_n }}">
+                        <div class="label-line">
+                            <label>Số lượng phương án hiển thị (Top N)</label>
+                            <strong id="topNValue">{{ form_data.top_n }}</strong>
+                        </div>
+                        <input type="range" name="top_n" min="1" max="50" step="1" value="{{ form_data.top_n }}" id="topNRange" class="range-input">
                     </div>
 
                     <div class="form-group">
                         <label>Dự đoán doanh thu</label>
-                        <select name="horizon">
-                            <option value="1m" {% if form_data.horizon == '1m' %}selected{% endif %}>1 tháng tới</option>
-                            <option value="3m" {% if form_data.horizon == '3m' %}selected{% endif %}>3 tháng tới</option>
-                        </select>
+                        <div class="select-wrap">
+                            <select name="horizon">
+                                <option value="1m" {% if form_data.horizon == '1m' %}selected{% endif %}>1 tháng tới</option>
+                                <option value="3m" {% if form_data.horizon == '3m' %}selected{% endif %}>3 tháng tới</option>
+                            </select>
+                            <span class="select-arrow"></span>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <div class="label-row">
-                            <label>Chọn nhóm sản phẩm</label>
-                            <span class="chip">Multi Select</span>
-                        </div>
-
-                        <input type="text" id="subcategory-search" class="search-input" placeholder="Tìm nhanh nhóm sản phẩm...">
-
-                        <div class="multi-select-card">
-                            <div class="multi-select-toolbar">
-                                <button type="button" class="mini-btn" onclick="toggleAllSubcategories(true)">Chọn tất cả</button>
-                                <button type="button" class="mini-btn ghost" onclick="toggleAllSubcategories(false)">Bỏ chọn</button>
-                                <span class="selected-counter" id="selected-counter">0 đã chọn</span>
-                            </div>
-
-                            <div class="checkbox-list" id="subcategory-list">
-                                {% for item in subcategories %}
-                                <label class="checkbox-item" data-label="{{ item|lower }}">
-                                    <input type="checkbox" name="subcategories" value="{{ item }}" {% if item in form_data.subcategories %}checked{% endif %}>
-                                    <span>{{ item }}</span>
-                                </label>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <small>Không chọn gì = lấy tất cả. Dữ liệu vẫn gửi về Flask bằng <code>request.form.getlist("subcategories")</code>.</small>
-                    </div>
+                    <label class="checkbox-line">
+                        <input type="checkbox" name="use_subcat_filter" id="useSubcatFilter" {% if form_data.use_subcat_filter %}checked{% endif %}>
+                        <span>Lọc theo sản phẩm</span>
+                    </label>
                 </div>
 
-                <div class="sidebar-section tip-panel glow-card">
-                    <div class="section-title-row">
-                        <h3>Thang AHP</h3>
-                        <span class="chip soft">Quick Guide</span>
+                <div class="sidebar-card" id="productFilterBox">
+                    <div class="label-line">
+                        <label>Chọn nhóm sản phẩm</label>
+                        <span class="mini-badge">{{ form_data.subcategories|length if form_data.use_subcat_filter else 0 }} đã chọn</span>
                     </div>
-                    <ul>
-                        <li><strong>1</strong> = quan trọng ngang nhau</li>
-                        <li><strong>3</strong> = quan trọng hơn vừa phải</li>
-                        <li><strong>5</strong> = quan trọng hơn rõ rệt</li>
-                        <li><strong>7</strong> = rất quan trọng</li>
-                        <li><strong>9</strong> = cực kỳ quan trọng</li>
-                    </ul>
+                    <input type="text" id="productSearch" class="search-input" placeholder="Tìm nhanh nhóm sản phẩm...">
+                    <div class="action-row">
+                        <button type="button" class="ghost-btn" onclick="toggleProducts(true)">Chọn tất cả</button>
+                        <button type="button" class="ghost-btn" onclick="toggleProducts(false)">Bỏ chọn</button>
+                    </div>
+                    <div class="product-checklist" id="productChecklist">
+                        {% for item in subcategories %}
+                        <label class="product-item" data-label="{{ item|lower }}">
+                            <input type="checkbox" name="subcategories" value="{{ item }}" {% if item in form_data.subcategories %}checked{% endif %}>
+                            <span>{{ item }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <p class="sidebar-note">Nếu không bật lọc theo sản phẩm thì hệ thống sẽ dùng toàn bộ danh sách từ backend.</p>
                 </div>
 
-                <button type="submit" class="btn-primary">
-                    <span>Chạy xếp hạng</span>
-                    <span class="btn-shine"></span>
-                </button>
-            </aside>
-
-            <main class="content">
-                <section class="hero glow-card">
-                    <div class="hero-copy">
-                        <p class="eyebrow hero-eyebrow">DSS AHP + ML • Premium UI</p>
-                        <h1>Lựa chọn sản phẩm kinh doanh chủ lực</h1>
-                        <p class="hero-text">
-                            Một dashboard rực rỡ hơn, sống động hơn và vẫn bám đúng logic Flask hiện tại: ma trận AHP, trọng số tiêu chí,
-                            ma trận phương án, dự đoán ML và biểu đồ đều hoạt động bình thường.
-                        </p>
-
-                        <div class="hero-pills">
-                            <span class="hero-pill">AHP tiêu chí</span>
-                            <span class="hero-pill">Ma trận phương án</span>
-                            <span class="hero-pill">ML dự đoán</span>
-                            <span class="hero-pill">Biểu đồ động</span>
-                        </div>
+                <div class="sidebar-card soft">
+                    <div class="label-line">
+                        <label>Thứ tự tiêu chí AHP</label>
+                        <span class="mini-badge soft">Cố định</span>
                     </div>
+                    <ol class="criteria-order">
+                        {% for label in criteria_vn_order %}
+                        <li>{{ label }}</li>
+                        {% endfor %}
+                    </ol>
+                </div>
 
-                    <div class="hero-side">
-                        <div class="hero-stat-card gradient-a">
-                            <span>CR hiện tại</span>
-                            <strong>{{ "%.4f"|format(consistency.CR if consistency.CR is defined else 0) }}</strong>
-                            <small>Độ nhất quán của ma trận tiêu chí</small>
-                        </div>
-                        <div class="hero-stat-card gradient-b">
-                            <span>Số phương án</span>
-                            <strong>{{ results|length }}</strong>
-                            <small>Số dòng được trả về sau khi xếp hạng</small>
-                        </div>
-                        <div class="hero-stat-card gradient-c">
-                            <span>Mô hình</span>
-                            <strong>{{ '1M' if form_data.horizon == '1m' else '3M' }}</strong>
-                            <small>Chế độ dự báo doanh thu đang chọn</small>
-                        </div>
+                <div class="sidebar-card soft guide-card">
+                    <label>Gợi ý thang Saaty</label>
+                    <div class="guide-list">
+                        <span>1 = ngang nhau</span>
+                        <span>3 = hơi quan trọng hơn</span>
+                        <span>5 = quan trọng hơn rõ</span>
+                        <span>7 = rất quan trọng</span>
+                        <span>9 = cực kỳ quan trọng</span>
                     </div>
-                </section>
+                </div>
+            </form>
+        </aside>
 
-                {% if error %}
-                <section class="alert alert-error">{{ error }}</section>
-                {% endif %}
+        <main class="content">
+            <section class="hero">
+                <div>
+                    <p class="eyebrow">Luồng hiển thị từ trên xuống dưới</p>
+                    <h1>Nhập ma trận so sánh cặp tiêu chí ở màn hình chính</h1>
+                    <p class="hero-text">Thanh bên giữ các bộ lọc giống UI cũ. Vùng chính chỉ tập trung vào bước nhập ma trận tiêu chí và hiển thị kết quả theo đúng trình tự tính toán mà giảng viên yêu cầu.</p>
+                </div>
+                <div class="hero-tags">
+                    <span>Ma trận tiêu chí</span>
+                    <span>Kiểm tra CR</span>
+                    <span>Ma trận phương án</span>
+                    <span>Xếp hạng cuối</span>
+                </div>
+            </section>
 
-                <section class="panel highlight-panel glow-card">
-                    <div class="panel-header">
-                        <div>
-                            <p class="panel-kicker">AHP CORE</p>
-                            <h2>Ma trận so sánh cặp tiêu chí</h2>
-                            <p class="muted">
-                                Bạn có thể nhập ở bất kỳ ô nào ngoài đường chéo chính. Ô đối xứng sẽ tự động cập nhật theo nghịch đảo.
-                            </p>
-                        </div>
-                        <div class="status-pill {{ cr_status.class }}">{{ cr_status.label }}</div>
+            <section class="panel panel-primary">
+                <div class="panel-head">
+                    <div>
+                        <p class="eyebrow">Bước 1 • Nhập liệu AHP</p>
+                        <h2>Ma trận so sánh cặp tiêu chí</h2>
+                        <p class="muted">Người dùng nhập trực tiếp tại đây. Hệ thống dùng đúng các giá trị này để tính trọng số tiêu chí, CI, CR và quyết định có được chạy xếp hạng tiếp hay không.</p>
                     </div>
+                    <button type="submit" form="mainForm" class="primary-btn">Chạy xếp hạng</button>
+                </div>
 
-                    <div class="table-wrap aurora-table-wrap">
-                        <table class="matrix-table fancy-table">
-                            <thead>
-                                <tr>
-                                    <th>Tiêu chí</th>
-                                    {% for code, label in criteria_labels %}
-                                    <th>{{ label }}</th>
-                                    {% endfor %}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for i in range(4) %}
-                                <tr>
-                                    <td class="row-title">{{ criteria_labels[i][1] }}</td>
-                                    {% for j in range(4) %}
-                                    <td>
-                                        <input
-                                            type="number"
-                                            step="any"
-                                            min="0.0001"
-                                            name="m_{{ i }}_{{ j }}"
-                                            id="m_{{ i }}_{{ j }}"
-                                            value="{{ form_data.matrix[i][j] }}"
-                                            data-row="{{ i }}"
-                                            data-col="{{ j }}"
-                                            {% if i == j %}readonly{% endif %}
-                                        >
-                                    </td>
-                                    {% endfor %}
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <p class="footnote">Đường chéo chính luôn bằng 1. Ví dụ nếu nhập 3 ở ô Lợi nhuận / Sản lượng, ô Sản lượng / Lợi nhuận sẽ tự thành 0.3333.</p>
-                </section>
-
-                <section class="stats-grid">
-                    <div class="stat-card glow-card stat-a">
-                        <p class="stat-label">Số phương án</p>
-                        <h3>{{ results|length }}</h3>
-                        <span class="stat-chip">Ranked</span>
-                    </div>
-                    <div class="stat-card glow-card stat-b">
-                        <p class="stat-label">CR</p>
-                        <h3>{{ "%.4f"|format(consistency.CR if consistency.CR is defined else 0) }}</h3>
-                        <span class="stat-chip">Consistency</span>
-                    </div>
-                    <div class="stat-card glow-card stat-c">
-                        <p class="stat-label">CI</p>
-                        <h3>{{ "%.4f"|format(consistency.CI if consistency.CI is defined else 0) }}</h3>
-                        <span class="stat-chip">Matrix Index</span>
-                    </div>
-                    <div class="stat-card glow-card stat-d">
-                        <p class="stat-label">λ max</p>
-                        <h3>{{ "%.4f"|format(consistency.lambda_max if consistency.lambda_max is defined else 0) }}</h3>
-                        <span class="stat-chip">Eigen Signal</span>
-                    </div>
-                </section>
-
-                <section class="tab-shell">
-                    <div class="tab-nav glow-card">
-                        <button type="button" class="tab-btn active" data-tab="ranking">Bảng xếp hạng</button>
-                        <button type="button" class="tab-btn" data-tab="weights">Trọng số tiêu chí</button>
-                        <button type="button" class="tab-btn" data-tab="alternatives">Ma trận phương án</button>
-                        <button type="button" class="tab-btn" data-tab="ml">ML dự đoán</button>
-                        <button type="button" class="tab-btn" data-tab="charts">Biểu đồ</button>
-                    </div>
-
-                    <div class="tab-panels">
-                        <section class="tab-panel active" id="tab-ranking">
-                            <div class="panel glow-card">
-                                <div class="panel-header simple">
-                                    <div>
-                                        <p class="panel-kicker">RANKING BOARD</p>
-                                        <h2>Bảng xếp hạng phương án</h2>
-                                        <p class="muted">Điểm tổng hợp được tính từ trọng số AHP và bảng điểm đã chuẩn hóa của backend.</p>
-                                    </div>
-                                </div>
-
-                                {% if best_option %}
-                                <div class="recommend-card highlight-card">
-                                    <div class="recommend-main">
-                                        <p class="recommend-label">Phương án nổi bật nhất</p>
-                                        <h3>{{ best_option.SubCategory }}</h3>
-                                        <p class="recommend-text">
-                                            Hạng {{ best_option.Rank }} với điểm tổng <strong>{{ "%.4f"|format(best_option.Score) }}</strong>.
-                                        </p>
-                                    </div>
-                                    <div class="recommend-side">
-                                        <div><span>Doanh thu</span><strong>{{ "{:,.2f}".format(best_option.Amount_total) }}</strong></div>
-                                        <div><span>Lợi nhuận</span><strong>{{ "{:,.2f}".format(best_option.Profit_total) }}</strong></div>
-                                        <div><span>Sản lượng</span><strong>{{ "{:,.2f}".format(best_option.Quantity_total) }}</strong></div>
-                                        <div><span>Ổn định</span><strong>{{ "%.4f"|format(best_option.Stability) }}</strong></div>
-                                    </div>
-                                </div>
-                                {% endif %}
-
-                                {% if results %}
-                                <div class="table-wrap">
-                                    <table class="result-table fancy-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Hạng</th>
-                                                <th>Nhóm sản phẩm</th>
-                                                <th>Score</th>
-                                                <th>Doanh thu</th>
-                                                <th>Lợi nhuận</th>
-                                                <th>Sản lượng</th>
-                                                <th>Ổn định</th>
-                                                <th>Dự đoán 1 tháng</th>
-                                                <th>Dự đoán TB 3 tháng</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for row in results %}
-                                            <tr class="{% if row.Rank == 1 %}top1{% elif row.Rank == 2 %}top2{% elif row.Rank == 3 %}top3{% endif %}">
-                                                <td>{{ row.Rank }}</td>
-                                                <td>{{ row.SubCategory }}</td>
-                                                <td>{{ "%.4f"|format(row.Score) }}</td>
-                                                <td>{{ "{:,.2f}".format(row.Amount_total) }}</td>
-                                                <td>{{ "{:,.2f}".format(row.Profit_total) }}</td>
-                                                <td>{{ "{:,.2f}".format(row.Quantity_total) }}</td>
-                                                <td>{{ "%.4f"|format(row.Stability) }}</td>
-                                                <td>{% if row.Pred_Amount_1m is not none %}{{ "{:,.2f}".format(row.Pred_Amount_1m) }}{% else %}-{% endif %}</td>
-                                                <td>{% if row.Pred_Amount_3m_avg is not none %}{{ "{:,.2f}".format(row.Pred_Amount_3m_avg) }}{% else %}-{% endif %}</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                {% else %}
-                                <div class="empty-state glow-card-soft">
-                                    <h3>Chưa có kết quả</h3>
-                                    <p>Hãy cấu hình bên trái rồi bấm <strong>Chạy xếp hạng</strong>.</p>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </section>
-
-                        <section class="tab-panel" id="tab-weights">
-                            <div class="panel glow-card">
-                                <div class="panel-header simple">
-                                    <div>
-                                        <p class="panel-kicker">CRITERIA WEIGHTS</p>
-                                        <h2>Trọng số tiêu chí</h2>
-                                        <p class="muted">Phần này tương đương tab “Trọng số tiêu chí” trong file mẫu Streamlit.</p>
-                                    </div>
-                                </div>
-
-                                <div class="dual-grid">
-                                    <div class="table-wrap">
-                                        <table class="simple-table fancy-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Tiêu chí</th>
-                                                    <th>Ký hiệu</th>
-                                                    <th>Trọng số</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for item in weight_rows %}
-                                                <tr>
-                                                    <td>{{ item.label }}</td>
-                                                    <td>{{ item.code }}</td>
-                                                    <td>{{ "%.4f"|format(item.value) }}</td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    <div class="weight-bars colorful-bars">
-                                        {% for item in weight_rows %}
-                                        <div class="bar-item glow-card-soft">
-                                            <div class="bar-top">
-                                                <span>{{ item.label }}</span>
-                                                <strong>{{ "%.4f"|format(item.value) }}</strong>
-                                            </div>
-                                            <div class="bar-bg"><div class="bar-fill fill-{{ loop.index }}" style="width: {{ (item.value * 100)|round(1) }}%"></div></div>
-                                        </div>
+                <div class="criteria-layout">
+                    <div class="criteria-main">
+                        <div class="table-wrap">
+                            <table class="matrix-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tiêu chí</th>
+                                        {% for key in criteria_keys %}
+                                        <th>{{ criteria_labels[key] }}</th>
                                         {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        <section class="tab-panel" id="tab-alternatives">
-                            <div class="panel glow-card">
-                                <div class="panel-header simple">
-                                    <div>
-                                        <p class="panel-kicker">ALTERNATIVE MATRICES</p>
-                                        <h2>Ma trận phương án theo từng tiêu chí</h2>
-                                        <p class="muted">
-                                            Ma trận được dựng tự động từ kết quả trả về theo công thức <strong>A[i,j] = value_i / value_j</strong>.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {% if alternative_matrices %}
-                                <p class="footnote">Để bảng gọn và dễ nhìn, phần xem trước này dùng {{ matrix_preview_count }} phương án đứng đầu.</p>
-                                {% for code, label in criteria_labels %}
-                                <div class="sub-matrix-block">
-                                    <h3>Theo tiêu chí: {{ label }}</h3>
-                                    <div class="table-wrap">
-                                        <table class="matrix-table alt-matrix fancy-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Phương án</th>
-                                                    {% for name in alternative_matrices[code].labels %}
-                                                    <th>{{ name }}</th>
-                                                    {% endfor %}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for i in range(alternative_matrices[code].labels|length) %}
-                                                <tr>
-                                                    <td class="row-title">{{ alternative_matrices[code].labels[i] }}</td>
-                                                    {% for j in range(alternative_matrices[code].labels|length) %}
-                                                    <td>{{ "%.4f"|format(alternative_matrices[code].matrix[i][j]) }}</td>
-                                                    {% endfor %}
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                                {% else %}
-                                <div class="empty-state glow-card-soft">
-                                    <h3>Chưa có ma trận phương án</h3>
-                                    <p>Ma trận này sẽ xuất hiện sau khi bạn chạy xếp hạng và có dữ liệu trả về từ backend.</p>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </section>
-
-                        <section class="tab-panel" id="tab-ml">
-                            <div class="panel glow-card">
-                                <div class="panel-header simple">
-                                    <div>
-                                        <p class="panel-kicker">ML FORECAST</p>
-                                        <h2>Machine Learning dự đoán</h2>
-                                        <p class="muted">Thông tin này lấy từ trường <code>ml</code> của API backend.</p>
-                                    </div>
-                                </div>
-
-                                <div class="note-box">{{ ml_info.note if ml_info.note else 'ML dùng để tham khảo và dự đoán doanh thu trong tương lai.' }}</div>
-
-                                {% if ml_metrics %}
-                                <div class="metric-grid compact">
-                                    {% for item in ml_metrics %}
-                                    <div class="mini-metric glow-card-soft">
-                                        <span>{{ item.label }}</span>
-                                        <strong>
-                                            {% if item.value is number %}
-                                                {{ "%.4f"|format(item.value) }}
-                                            {% else %}
-                                                {{ item.value }}
-                                            {% endif %}
-                                        </strong>
-                                    </div>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for i in range(4) %}
+                                    <tr>
+                                        <td class="row-title">{{ criteria_labels[criteria_keys[i]] }}</td>
+                                        {% for j in range(4) %}
+                                        <td>
+                                            <input
+                                                type="number"
+                                                step="any"
+                                                min="0.0001"
+                                                name="m_{{ i }}_{{ j }}"
+                                                id="m_{{ i }}_{{ j }}"
+                                                form="mainForm"
+                                                class="matrix-input"
+                                                value="{{ form_data.matrix[i][j] }}"
+                                                data-row="{{ i }}"
+                                                data-col="{{ j }}"
+                                                {% if i == j %}readonly{% endif %}
+                                            >
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
                                     {% endfor %}
-                                </div>
-                                {% endif %}
-
-                                {% if results %}
-                                <div class="table-wrap mt-16">
-                                    <table class="simple-table fancy-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Hạng</th>
-                                                <th>Nhóm sản phẩm</th>
-                                                <th>Dự đoán 1 tháng</th>
-                                                <th>Dự đoán TB 3 tháng</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for row in results %}
-                                            <tr>
-                                                <td>{{ row.Rank }}</td>
-                                                <td>{{ row.SubCategory }}</td>
-                                                <td>{% if row.Pred_Amount_1m is not none %}{{ "{:,.2f}".format(row.Pred_Amount_1m) }}{% else %}-{% endif %}</td>
-                                                <td>{% if row.Pred_Amount_3m_avg is not none %}{{ "{:,.2f}".format(row.Pred_Amount_3m_avg) }}{% else %}-{% endif %}</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                {% else %}
-                                <div class="empty-state glow-card-soft">
-                                    <h3>Chưa có dữ liệu dự đoán</h3>
-                                    <p>Hãy chạy mô hình để xem các giá trị dự đoán từ ML.</p>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </section>
-
-                        <section class="tab-panel" id="tab-charts">
-                            <div class="panel glow-card">
-                                <div class="panel-header simple">
-                                    <div>
-                                        <p class="panel-kicker">VISUAL ANALYTICS</p>
-                                        <h2>Biểu đồ trực quan</h2>
-                                        <p class="muted">Biểu đồ thanh dạng CSS để không cần thư viện ngoài mà vẫn chạy ổn với Flask.</p>
-                                    </div>
-                                </div>
-
-                                {% if score_bars %}
-                                <div class="chart-grid">
-                                    <div class="chart-card glow-card-soft">
-                                        <h3>Điểm tổng hợp theo phương án</h3>
-                                        <div class="chart-list">
-                                            {% for item in score_bars %}
-                                            <div class="chart-row">
-                                                <div class="chart-head">
-                                                    <span>{{ item.label }}</span>
-                                                    <strong>{{ "%.4f"|format(item.value) }}</strong>
-                                                </div>
-                                                <div class="chart-track"><div class="chart-bar score-bar" style="width: {{ item.width }}%"></div></div>
-                                            </div>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-
-                                    <div class="chart-card glow-card-soft">
-                                        <h3>{{ active_prediction_label }}</h3>
-                                        {% if prediction_bars %}
-                                        <div class="chart-list">
-                                            {% for item in prediction_bars %}
-                                            <div class="chart-row">
-                                                <div class="chart-head">
-                                                    <span>{{ item.label }}</span>
-                                                    <strong>{{ "{:,.2f}".format(item.value) }}</strong>
-                                                </div>
-                                                <div class="chart-track"><div class="chart-bar pred-bar" style="width: {{ item.width }}%"></div></div>
-                                            </div>
-                                            {% endfor %}
-                                        </div>
-                                        {% else %}
-                                        <div class="empty-inline">Chưa có dữ liệu dự đoán để vẽ biểu đồ.</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                {% else %}
-                                <div class="empty-state glow-card-soft">
-                                    <h3>Chưa có biểu đồ</h3>
-                                    <p>Biểu đồ sẽ hiện ra ngay sau khi có kết quả xếp hạng.</p>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </section>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </section>
-            </main>
-        </div>
-    </form>
+                    <aside class="criteria-side">
+                        <div class="side-card">
+                            <span class="side-label">Khoảng thời gian</span>
+                            <strong>{{ form_data.start_month }} → {{ form_data.end_month }}</strong>
+                        </div>
+                        <div class="side-card">
+                            <span class="side-label">Top N</span>
+                            <strong>{{ form_data.top_n }}</strong>
+                        </div>
+                        <div class="side-card">
+                            <span class="side-label">Sản phẩm đang xét</span>
+                            <strong>{{ current_products|length }}</strong>
+                            <small>{% if form_data.use_subcat_filter %}Đang lọc theo sản phẩm đã chọn{% else %}Đang dùng toàn bộ sản phẩm{% endif %}</small>
+                        </div>
+                        <div class="side-card bright">
+                            <span class="side-label">Nhắc nhanh</span>
+                            <small>Đường chéo chính luôn bằng 1. Ô đối xứng sẽ tự lấy nghịch đảo để bạn không phải nhập hai lần.</small>
+                        </div>
+                    </aside>
+                </div>
+            </section>
 
-    <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const tabButtons = document.querySelectorAll(".tab-btn");
-        const tabPanels = document.querySelectorAll(".tab-panel");
+            {% if error %}
+            <section class="alert alert-error">
+                <strong>Ma trận chưa hợp lệ.</strong> {{ error }}
+            </section>
+            {% endif %}
 
-        tabButtons.forEach(button => {
-            button.addEventListener("click", function () {
-                const target = this.dataset.tab;
-                tabButtons.forEach(btn => btn.classList.remove("active"));
-                tabPanels.forEach(panel => panel.classList.remove("active"));
-                this.classList.add("active");
-                document.getElementById(`tab-${target}`).classList.add("active");
+            {% if backend_error %}
+            <section class="alert alert-error">
+                <strong>Lỗi backend.</strong> {{ backend_error }}
+            </section>
+            {% endif %}
+
+            {% if criteria_detail %}
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <p class="eyebrow">Bước 2 • Kết quả tiêu chí</p>
+                        <h2>Trọng số tiêu chí và kiểm tra nhất quán</h2>
+                    </div>
+                    <div class="status-badge {{ 'ok' if criteria_status.ok else 'bad' }}">{{ criteria_status.label }}</div>
+                </div>
+                <div class="metric-grid four">
+                    <div class="metric-card"><span>CR</span><strong>{{ '%.4f'|format(criteria_detail.CR) }}</strong></div>
+                    <div class="metric-card"><span>CI</span><strong>{{ '%.4f'|format(criteria_detail.CI) }}</strong></div>
+                    <div class="metric-card"><span>λ max</span><strong>{{ '%.4f'|format(criteria_detail.lambda_max) }}</strong></div>
+                    <div class="metric-card"><span>Số tiêu chí</span><strong>4</strong></div>
+                </div>
+                <div class="split-grid">
+                    <div class="panel-soft">
+                        <h3>Ma trận chuẩn hóa</h3>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tiêu chí</th>
+                                        {% for key in criteria_keys %}<th>{{ criteria_labels[key] }}</th>{% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for i in range(4) %}
+                                    <tr>
+                                        <td class="row-title">{{ criteria_labels[criteria_keys[i]] }}</td>
+                                        {% for value in criteria_detail.normalized[i] %}
+                                        <td>{{ '%.4f'|format(value) }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="panel-soft">
+                        <h3>Trọng số tiêu chí</h3>
+                        <div class="weight-stack">
+                            {% for row in weights_rows %}
+                            <div class="weight-row">
+                                <div class="weight-meta"><span>{{ row.label }}</span><strong>{{ '%.4f'|format(row.weight) }}</strong></div>
+                                <div class="bar-shell"><div class="bar-fill" style="width: {{ (row.weight * 100)|round(2) }}%"></div></div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+            {% if results and not error and not backend_error %}
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <p class="eyebrow">Bước 3 • Ma trận phương án</p>
+                        <h2>Ma trận phương án theo từng tiêu chí</h2>
+                        <p class="muted">Phần này bám theo UI cũ của bạn bạn: lấy các phương án tốt nhất từ kết quả backend để dựng ma trận theo từng tiêu chí.</p>
+                    </div>
+                </div>
+
+                {% for analysis in alternative_analyses %}
+                <article class="alt-card">
+                    <div class="alt-head">
+                        <h3>{{ loop.index }}. {{ analysis.label }}</h3>
+                        <span class="mini-badge ok">{{ 'Đạt' if analysis.CR < 0.1 else 'Chưa đạt' }} (CR {{ '<' if analysis.CR < 0.1 else '≥' }} 0.1)</span>
+                    </div>
+                    <div class="metric-grid four compact-gap">
+                        <div class="metric-card"><span>CR</span><strong>{{ '%.4f'|format(analysis.CR) }}</strong></div>
+                        <div class="metric-card"><span>CI</span><strong>{{ '%.4f'|format(analysis.CI) }}</strong></div>
+                        <div class="metric-card"><span>λ max</span><strong>{{ '%.4f'|format(analysis.lambda_max) }}</strong></div>
+                        <div class="metric-card"><span>Số phương án</span><strong>{{ analysis.alternatives|length }}</strong></div>
+                    </div>
+                    <div class="panel-soft">
+                        <h4>Ma trận so sánh cặp</h4>
+                        <div class="table-wrap"><table class="data-table small"><thead><tr><th>Phương án</th>{% for alt in analysis.alternatives %}<th>{{ alt }}</th>{% endfor %}</tr></thead><tbody>{% for i in range(analysis.alternatives|length) %}<tr><td class="row-title">{{ analysis.alternatives[i] }}</td>{% for value in analysis.pairwise[i] %}<td>{{ '%.4f'|format(value) }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
+                    </div>
+                    <div class="panel-soft">
+                        <h4>Ma trận chuẩn hoá</h4>
+                        <div class="table-wrap"><table class="data-table small"><thead><tr><th>Phương án</th>{% for alt in analysis.alternatives %}<th>{{ alt }}</th>{% endfor %}</tr></thead><tbody>{% for i in range(analysis.alternatives|length) %}<tr><td class="row-title">{{ analysis.alternatives[i] }}</td>{% for value in analysis.normalized[i] %}<td>{{ '%.4f'|format(value) }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
+                    </div>
+                    <div class="triple-grid">
+                        <div class="panel-soft compact-panel">
+                            <h4>Tổng cột</h4>
+                            {% for idx in range(analysis.alternatives|length) %}<div class="kv"><span>{{ analysis.alternatives[idx] }}</span><strong>{{ '%.4f'|format(analysis.column_sums[idx]) }}</strong></div>{% endfor %}
+                        </div>
+                        <div class="panel-soft compact-panel">
+                            <h4>Trọng số cục bộ</h4>
+                            {% for idx in range(analysis.alternatives|length) %}
+                            <div class="weight-row">
+                                <div class="weight-meta"><span>{{ analysis.alternatives[idx] }}</span><strong>{{ '%.4f'|format(analysis.weights[idx]) }}</strong></div>
+                                <div class="bar-shell"><div class="bar-fill alt" style="width: {{ (analysis.weights[idx] * 100)|round(2) }}%"></div></div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="panel-soft compact-panel">
+                            <h4>Consistency vector</h4>
+                            {% for idx in range(analysis.alternatives|length) %}<div class="kv"><span>{{ analysis.alternatives[idx] }}</span><strong>{{ '%.4f'|format(analysis.consistency_vector[idx]) }}</strong></div>{% endfor %}
+                        </div>
+                    </div>
+                </article>
+                {% endfor %}
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <p class="eyebrow">Bước 4 • Tổng hợp</p>
+                        <h2>Ma trận tổng hợp trọng số phương án</h2>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Phương án</th>
+                                {% for key in criteria_keys %}<th>{{ criteria_labels[key] }}</th>{% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in alternative_summary_rows %}
+                            <tr>
+                                <td class="row-title">{{ row.SubCategory }}</td>
+                                {% for key in criteria_keys %}
+                                <td>{{ '%.4f'|format(row[key]) }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head"><div><p class="eyebrow">Bước 5 • Biểu đồ</p><h2>Biểu đồ phân tích</h2></div></div>
+                <div class="split-grid">
+                    <div class="panel-soft">
+                        <h3>Điểm tổng hợp theo phương án</h3>
+                        <div class="chart-stack">
+                            {% for idx in range(charts.score_labels|length) %}
+                            <div class="chart-row"><span>{{ charts.score_labels[idx] }}</span><div class="chart-bar"><div class="chart-fill" style="width: {{ (charts.score_values[idx] * 100)|round(2) }}%"></div></div><strong>{{ '%.4f'|format(charts.score_values[idx]) }}</strong></div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="panel-soft">
+                        <h3>Doanh thu dự đoán</h3>
+                        {% if charts.pred_labels %}
+                        <div class="chart-stack">
+                            {% set max_pred = charts.pred_values|max %}
+                            {% for idx in range(charts.pred_labels|length) %}
+                            <div class="chart-row"><span>{{ charts.pred_labels[idx] }}</span><div class="chart-bar"><div class="chart-fill secondary" style="width: {{ ((charts.pred_values[idx] / max_pred) * 100)|round(2) if max_pred > 0 else 0 }}%"></div></div><strong>{{ '{:,.2f}'.format(charts.pred_values[idx]) }}</strong></div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="muted">Chưa có dữ liệu dự đoán để vẽ biểu đồ.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head"><div><p class="eyebrow">Bước 6 • Xếp hạng</p><h2>Danh sách xếp hạng cuối cùng</h2></div></div>
+                <div class="table-wrap">
+                    <table class="data-table result-table">
+                        <thead>
+                            <tr>
+                                <th>Hạng</th><th>Phương án</th><th>Score</th><th>Doanh thu</th><th>Lợi nhuận</th><th>Sản lượng</th><th>Ổn định</th><th>Dự đoán 1 tháng</th><th>Dự đoán TB 3 tháng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in results %}
+                            <tr class="{% if row.Rank == 1 %}top1{% elif row.Rank == 2 %}top2{% elif row.Rank == 3 %}top3{% endif %}">
+                                <td>{{ row.Rank }}</td>
+                                <td class="row-title">{{ row.SubCategory }}</td>
+                                <td>{{ '%.4f'|format(row.Score) }}</td>
+                                <td>{{ '{:,.2f}'.format(row.Amount_total) }}</td>
+                                <td>{{ '{:,.2f}'.format(row.Profit_total) }}</td>
+                                <td>{{ '{:,.2f}'.format(row.Quantity_total) }}</td>
+                                <td>{{ '%.4f'|format(row.Stability) }}</td>
+                                <td>{% if row.Pred_Amount_1m is not none %}{{ '{:,.2f}'.format(row.Pred_Amount_1m) }}{% else %}-{% endif %}</td>
+                                <td>{% if row.Pred_Amount_3m_avg is not none %}{{ '{:,.2f}'.format(row.Pred_Amount_3m_avg) }}{% else %}-{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head"><div><p class="eyebrow">Bước 7 • Machine Learning</p><h2>Machine Learning tham khảo</h2></div></div>
+                <p class="muted">{{ ml_note }}</p>
+                {% if ml_metrics %}
+                <div class="table-wrap simple-wrap">
+                    <table class="simple-table">
+                        <tbody>
+                            {% for key, value in ml_metrics.items() %}
+                            <tr><td class="row-title">{{ key }}</td><td>{{ value }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </section>
+
+            {% if best_option %}
+            <section class="panel best-panel">
+                <div class="panel-head"><div><p class="eyebrow">Kết luận</p><h2>Phương án nên chọn</h2></div></div>
+                <div class="best-card">
+                    <div>
+                        <span class="best-tag">Lựa chọn ưu tiên</span>
+                        <h3>{{ best_option.SubCategory }}</h3>
+                        <p class="muted">Đứng hạng {{ best_option.Rank }} với điểm tổng hợp {{ '%.4f'|format(best_option.Score) }}.</p>
+                    </div>
+                    <div class="best-metrics">
+                        <div><span>Doanh thu</span><strong>{{ '{:,.2f}'.format(best_option.Amount_total) }}</strong></div>
+                        <div><span>Lợi nhuận</span><strong>{{ '{:,.2f}'.format(best_option.Profit_total) }}</strong></div>
+                        <div><span>Sản lượng</span><strong>{{ '{:,.2f}'.format(best_option.Quantity_total) }}</strong></div>
+                        <div><span>Ổn định</span><strong>{{ '%.4f'|format(best_option.Stability) }}</strong></div>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+            {% endif %}
+        </main>
+    </div>
+
+<script>
+(function () {
+    const range = document.getElementById('topNRange');
+    const rangeValue = document.getElementById('topNValue');
+    if (range && rangeValue) {
+        const updateRange = () => rangeValue.textContent = range.value;
+        range.addEventListener('input', updateRange);
+        updateRange();
+    }
+
+    const filterToggle = document.getElementById('useSubcatFilter');
+    const filterBox = document.getElementById('productFilterBox');
+    function syncFilterBox() {
+        if (!filterToggle || !filterBox) return;
+        filterBox.style.display = filterToggle.checked ? 'block' : 'none';
+    }
+    if (filterToggle) {
+        filterToggle.addEventListener('change', syncFilterBox);
+        syncFilterBox();
+    }
+
+    const searchInput = document.getElementById('productSearch');
+    const productItems = document.querySelectorAll('#productChecklist .product-item');
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            const term = this.value.trim().toLowerCase();
+            productItems.forEach(item => {
+                item.style.display = item.dataset.label.includes(term) ? '' : 'none';
             });
         });
+    }
 
-        const size = 4;
-        let isUpdating = false;
-
-        function formatValue(value) {
-            return Number(value).toFixed(4);
-        }
-
-        for (let i = 0; i < size; i++) {
-            for (let j = 0; j < size; j++) {
-                const input = document.getElementById(`m_${i}_${j}`);
-                if (!input) continue;
-
-                input.addEventListener("input", function () {
-                    if (isUpdating) return;
-
-                    const row = parseInt(this.dataset.row, 10);
-                    const col = parseInt(this.dataset.col, 10);
-
-                    if (row === col) {
-                        this.value = "1.0000";
-                        return;
-                    }
-
-                    const value = parseFloat(this.value);
-                    if (isNaN(value) || value <= 0) return;
-
-                    const opposite = document.getElementById(`m_${col}_${row}`);
-                    if (!opposite) return;
-
-                    isUpdating = true;
-                    opposite.value = formatValue(1 / value);
-                    isUpdating = false;
-                });
-
-                input.addEventListener("blur", function () {
-                    const row = parseInt(this.dataset.row, 10);
-                    const col = parseInt(this.dataset.col, 10);
-                    if (row === col) {
-                        this.value = "1.0000";
-                        return;
-                    }
-                    const value = parseFloat(this.value);
-                    if (!isNaN(value) && value > 0) {
-                        this.value = formatValue(value);
-                    }
-                });
-            }
-        }
-
-        const searchInput = document.getElementById("subcategory-search");
-        const checkboxItems = document.querySelectorAll(".checkbox-item");
-        const checkboxInputs = document.querySelectorAll('input[name="subcategories"]');
-        const selectedCounter = document.getElementById("selected-counter");
-
-        function updateCounter() {
-            const count = Array.from(checkboxInputs).filter(cb => cb.checked).length;
-            if (selectedCounter) {
-                selectedCounter.textContent = `${count} đã chọn`;
-            }
-        }
-
-        if (searchInput) {
-            searchInput.addEventListener("input", function () {
-                const term = this.value.trim().toLowerCase();
-                checkboxItems.forEach(item => {
-                    const label = item.dataset.label || "";
-                    item.style.display = label.includes(term) ? "flex" : "none";
-                });
-            });
-        }
-
-        checkboxInputs.forEach(cb => cb.addEventListener("change", updateCounter));
-        updateCounter();
-    });
-
-    function toggleAllSubcategories(checked) {
-        document.querySelectorAll('input[name="subcategories"]').forEach(cb => {
+    window.toggleProducts = function (checked) {
+        document.querySelectorAll('#productChecklist input[type="checkbox"]').forEach(cb => {
             cb.checked = checked;
         });
-        const selectedCounter = document.getElementById("selected-counter");
-        if (selectedCounter) {
-            const count = checked ? document.querySelectorAll('input[name="subcategories"]').length : 0;
-            selectedCounter.textContent = `${count} đã chọn`;
+    };
+
+    let isUpdating = false;
+    for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+            const input = document.getElementById(`m_${i}_${j}`);
+            if (!input) continue;
+            input.addEventListener('input', function () {
+                if (isUpdating) return;
+                const row = Number(this.dataset.row);
+                const col = Number(this.dataset.col);
+                if (row === col) {
+                    this.value = '1';
+                    return;
+                }
+                const value = parseFloat(this.value);
+                const mirror = document.getElementById(`m_${col}_${row}`);
+                if (!mirror || !Number.isFinite(value) || value <= 0) return;
+                isUpdating = true;
+                mirror.value = (1 / value).toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+                isUpdating = false;
+            });
         }
     }
-    </script>
+})();
+</script>
 </body>
 </html>
