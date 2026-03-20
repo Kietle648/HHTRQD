@@ -3,7 +3,7 @@ from .data_io import load_csv
 from .preprocess import standardize_columns, ensure_yearmonth, validate_required_columns
 from .features import make_monthly_table, compute_criteria_table
 from .ml import train_next_month_model, predict_3_months_ahead, save_model
-from .ranker import build_scoring_table, score_and_rank
+from .ranker import score_and_rank_ahp
 
 def run_pipeline(
     csv_path: str,
@@ -53,9 +53,12 @@ def run_pipeline(
         if "Pred_Amount_1m" in weights:
             weights = {k: v for k, v in weights.items() if k != "Pred_Amount_1m"}
 
-    # 5) Scoring + ranking
-    scoring = build_scoring_table(crit)
-    ranked = score_and_rank(scoring, weights)
+    # 5) Scoring + ranking theo công thức AHP PDF
+    ranked, _ = score_and_rank_ahp(
+        criteria_table=crit,
+        weights=weights,
+        criteria_order=list(weights.keys()),
+    )
 
     return {
         "monthly": monthly,

@@ -12,7 +12,7 @@ from src.preprocess import standardize_columns, ensure_yearmonth, validate_requi
 from src.features import make_monthly_table, compute_criteria_table
 from src.ml import train_next_month_model, predict_3_months_ahead
 from src.ahp import ahp_weights
-from src.ranker import build_scoring_table, score_and_rank
+from src.ranker import score_and_rank_ahp
 
 APP_TITLE = "DSS AHP + ML Backend"
 DATA_PATH = "data/raw/Sales Dataset.csv"
@@ -54,8 +54,10 @@ class RankItem(BaseModel):
     Stability: float
     Pred_Amount_1m: Optional[float] = None
     Pred_Amount_3m_avg: Optional[float] = None
-    # breakdown điểm theo tiêu chí
+    # breakdown điểm theo tiêu chí = trọng số tiêu chí * trọng số phương án theo tiêu chí
     contrib: Dict[str, float]
+    # trọng số phương án theo từng tiêu chí dùng để tính Score theo công thức AHP PDF
+    local_weights: Dict[str, float]
 
 
 class RankResponse(BaseModel):
@@ -135,10 +137,13 @@ def _to_items(ranked_df: pd.DataFrame,
 
     items: List[RankItem] = []
     for _, row in ranked_df.iterrows():
-        contrib = {}
-        # đóng góp theo tiêu chí = weight * normalized_value
+        contrib: Dict[str, float] = {}
+        local_weights: Dict[str, float] = {}
         for crit, w in weights.items():
-            contrib[crit] = float(w) * float(row[f"{crit}_norm"])
+            local_col = f"{crit}_local_weight"
+            contrib_col = f"{crit}_contrib"
+            local_weights[crit] = float(row[local_col]) if local_col in row else 0.0
+            contrib[crit] = float(row[contrib_col]) if contrib_col in row else float(w) * local_weights[crit]
 
         items.append(RankItem(
             Rank=int(row["Rank"]),
@@ -150,7 +155,8 @@ def _to_items(ranked_df: pd.DataFrame,
             Stability=float(row["Stability"]),
             Pred_Amount_1m=(float(row[pred1]) if pred1 in row and not pd.isna(row[pred1]) else None),
             Pred_Amount_3m_avg=(float(row[pred3]) if pred3 in row and not pd.isna(row[pred3]) else None),
-            contrib=contrib
+            contrib=contrib,
+            local_weights=local_weights
         ))
     return items
 
@@ -218,9 +224,20 @@ def rank(req: RankRequest):
     w, ahp_info = ahp_weights(A)
     weights = {criteria_order[i]: float(w[i]) for i in range(4)}
 
-    # 5) scoring + ranking
-    scoring = build_scoring_table(crit)
-    ranked = score_and_rank(scoring, weights).head(req.top_n)
+    if float(ahp_info.get("CR", 0.0)) >= 0.1:
+        raise HTTPException(
+            status_code=400,
+            detail="Ma trận so sánh cặp tiêu chí chưa nhất quán (CR >= 0.1). Hãy điều chỉnh lại trước khi xếp hạng."
+        )
+
+    # 5) scoring + ranking theo công thức AHP PDF:
+    # Score(i) = sum_k [ w_k * p_(i,k) ]
+    ranked_all, _ = score_and_rank_ahp(
+        criteria_table=crit,
+        weights=weights,
+        criteria_order=criteria_order,
+    )
+    ranked = ranked_all.head(req.top_n)
 
     # 6) response
     items = _to_items(ranked, weights, req.horizon)

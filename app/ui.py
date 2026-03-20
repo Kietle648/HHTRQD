@@ -317,11 +317,16 @@ if run:
 
     res_df = pd.DataFrame(results)
 
-    # nếu có contrib
+    # nếu có contrib / local_weights
     if "contrib" in res_df.columns:
         contrib_df = pd.json_normalize(res_df["contrib"])
         contrib_df.columns = [f"contrib_{c}" for c in contrib_df.columns]
         res_df = pd.concat([res_df.drop(columns=["contrib"]), contrib_df], axis=1)
+
+    if "local_weights" in res_df.columns:
+        local_df = pd.json_normalize(res_df["local_weights"])
+        local_df.columns = [f"local_{c}" for c in local_df.columns]
+        res_df = pd.concat([res_df.drop(columns=["local_weights"]), local_df], axis=1)
 
     # =========================
     # KPI row
@@ -390,7 +395,7 @@ if run:
         st.subheader("Ma trận trọng số của các phương án theo từng tiêu chí")
         st.caption(
             "Mỗi tiêu chí được biểu diễn bằng một ma trận so sánh cặp giữa các phương án, "
-            "với công thức A[i,j] = value_i / value_j."
+            "Điểm cuối cùng vẫn tính theo công thức AHP PDF: Score(i) = Σ[w_k × p_(i,k)]."
         )
 
         alt_base = res_df[
