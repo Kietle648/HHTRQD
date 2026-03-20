@@ -82,16 +82,17 @@ def parse_pairwise_matrix(form_data: Any, default_matrix: List[List[float]]) -> 
 def ahp_details(matrix: List[List[float]] | np.ndarray) -> Dict[str, Any]:
     A = np.array(matrix, dtype=float)
     n = int(A.shape[0])
-    eigvals, eigvecs = np.linalg.eig(A)
-    idx = int(np.argmax(eigvals.real))
-    lambda_max = float(eigvals.real[idx])
-    w = np.abs(eigvecs[:, idx].real)
-    w = np.ones(n) / n if float(w.sum()) == 0 else w / w.sum()
 
+    # Đúng theo file PDF: chuẩn hóa theo cột rồi lấy trung bình theo hàng
     col_sums = A.sum(axis=0)
     normalized = np.divide(A, col_sums, out=np.zeros_like(A), where=col_sums != 0)
+    w = normalized.mean(axis=1)
+    w = np.ones(n) / n if float(w.sum()) == 0 else w / w.sum()
+
+    # Kiểm tra nhất quán
     weighted_sum = A @ w
     consistency_vector = np.divide(weighted_sum, w, out=np.zeros_like(weighted_sum), where=w != 0)
+    lambda_max = float(consistency_vector.mean()) if n > 0 else 0.0
     ci = (lambda_max - n) / (n - 1) if n > 2 else 0.0
     ri = RI_TABLE.get(n, 1.49)
     cr = (ci / ri) if ri > 0 else 0.0
@@ -119,21 +120,11 @@ def build_pairwise_from_values(alts: List[str], vals: List[float]) -> List[List[
     return m.tolist()
 
 
-def build_pairwise_from_weights(alts: List[str], weights: List[float]) -> List[List[float]]:
-    """
-    Dựng lại ma trận so sánh cặp từ chính local weights mà backend đã dùng để tính Score.
-    Như vậy phần hiển thị ở frontend sẽ bám đúng công thức cuối của AHP,
-    thay vì tự tính lại từ giá trị thô và làm lệch bảng tổng hợp.
-    """
-    return build_pairwise_from_values(alts, weights)
-
-
-def build_alternative_analyses(results: List[Dict[str, Any]], max_items: Optional[int] = None) -> Dict[str, Any]:
+def build_alternative_analyses(results: List[Dict[str, Any]], max_items: int = 4) -> Dict[str, Any]:
     if not results:
         return {"analyses": [], "summary_rows": [], "alternatives": []}
 
-    ordered = sorted(results, key=lambda x: x.get("Rank", 999999))
-    rows = ordered[:max_items] if max_items else ordered
+    rows = sorted(results, key=lambda x: x.get("Rank", 999999))[:max_items]
     alternatives = [str(r["SubCategory"]) for r in rows]
     criteria_map = {
         "Amount_total": "Doanh thu",
@@ -143,66 +134,28 @@ def build_alternative_analyses(results: List[Dict[str, Any]], max_items: Optiona
     }
 
     analyses: List[Dict[str, Any]] = []
-    summary_rows: List[Dict[str, Any]] = []
     local_vectors: Dict[str, List[float]] = {}
-
-    # Đúng theo PDF: với mỗi tiêu chí, tự tạo ma trận phương án -> chuẩn hóa -> lấy trọng số cục bộ.
     for crit, label in criteria_map.items():
-        source_values = [float(r.get(crit, 0.0) or 0.0) for r in rows]
-        pairwise = build_pairwise_from_values(alternatives, source_values)
+        values = [float(r.get(crit, 0.0) or 0.0) for r in rows]
+        pairwise = build_pairwise_from_values(alternatives, values)
         detail = ahp_details(pairwise)
-        local_vectors[crit] = [float(v) for v in detail["weights"]]
+        local_vectors[crit] = detail["weights"]
         analyses.append({
             "criterion": crit,
             "label": label,
             "alternatives": alternatives,
-            "source_values": source_values,
+            "source_values": values,
             **detail,
         })
 
+    summary_rows: List[Dict[str, Any]] = []
     for idx, alt in enumerate(alternatives):
-        base = rows[idx]
-        row: Dict[str, Any] = {
-            "SubCategory": alt,
-            "Amount_total": float(base.get("Amount_total", 0.0) or 0.0),
-            "Profit_total": float(base.get("Profit_total", 0.0) or 0.0),
-            "Quantity_total": float(base.get("Quantity_total", 0.0) or 0.0),
-            "Stability": float(base.get("Stability", 0.0) or 0.0),
-            "Pred_Amount_1m": base.get("Pred_Amount_1m"),
-            "Pred_Amount_3m_avg": base.get("Pred_Amount_3m_avg"),
-        }
+        row: Dict[str, Any] = {"SubCategory": alt}
         for crit in CRITERIA_ORDER:
             row[crit] = local_vectors[crit][idx]
         summary_rows.append(row)
 
     return {"analyses": analyses, "summary_rows": summary_rows, "alternatives": alternatives}
-
-
-def build_ranked_rows(summary_rows: List[Dict[str, Any]], criteria_weights: List[float]) -> List[Dict[str, Any]]:
-    if not summary_rows:
-        return []
-
-    scored: List[Dict[str, Any]] = []
-    for row in summary_rows:
-        out = dict(row)
-        score = 0.0
-        contrib: Dict[str, float] = {}
-        local_weights: Dict[str, float] = {}
-        for idx, crit in enumerate(CRITERIA_ORDER):
-            p_ik = float(out.get(crit, 0.0) or 0.0)
-            w_k = float(criteria_weights[idx])
-            contrib[crit] = w_k * p_ik
-            local_weights[crit] = p_ik
-            score += contrib[crit]
-        out["Score"] = score
-        out["contrib"] = contrib
-        out["local_weights"] = local_weights
-        scored.append(out)
-
-    scored.sort(key=lambda x: x.get("Score", 0.0), reverse=True)
-    for idx, row in enumerate(scored, start=1):
-        row["Rank"] = idx
-    return scored
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -278,22 +231,16 @@ def index() -> str:
             if use_subcat_filter and selected_subcategories:
                 payload["subcategories"] = selected_subcategories
             try:
-                # Lấy toàn bộ phương án sau khi lọc để tính đúng AHP như trong PDF,
-                # sau đó mới cắt top_n để hiển thị chart/bảng xếp hạng.
-                all_payload = dict(payload)
-                all_payload["top_n"] = max(1, len(current_products))
-                r = requests.post(f"{API_BASE}/rank", json=all_payload, timeout=120)
+                r = requests.post(f"{API_BASE}/rank", json=payload, timeout=120)
                 r.raise_for_status()
                 data = r.json()
-                all_results = data.get("results", [])
+                results = data.get("results", [])
                 ml = data.get("ml", {})
                 ml_note = ml.get("note")
                 ml_metrics = ml.get("metrics", {})
-                if all_results:
-                    alt_payload = build_alternative_analyses(all_results)
-                    ranked_all = build_ranked_rows(alt_payload.get("summary_rows", []), criteria_detail["weights"])
-                    results = ranked_all[: int(form_data["top_n"])]
-                    best_option = results[0] if results else None
+                if results:
+                    alt_payload = build_alternative_analyses(results, max_items=min(4, len(results)))
+                    best_option = sorted(results, key=lambda x: x.get("Rank", 999999))[0]
                     pred_key = "Pred_Amount_1m" if form_data["horizon"] == "1m" else "Pred_Amount_3m_avg"
                     charts = {
                         "score_labels": [str(r["SubCategory"]) for r in results],
