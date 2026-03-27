@@ -90,3 +90,46 @@ body{
 .best-panel{background:linear-gradient(135deg,rgba(255,253,243,.95),rgba(255,246,232,.92))}.best-card{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:20px;align-items:start}.best-tag{padding:8px 12px;background:linear-gradient(135deg,var(--primary2),var(--primary));color:#fff;font-size:12px;margin-bottom:14px}.best-card h3{margin:0 0 10px;font-size:42px}.best-metrics{display:grid;grid-template-columns:1fr 1fr;gap:12px}.best-metrics div{background:rgba(255,255,255,.78);border:1px solid rgba(227,214,191,.8);border-radius:18px;padding:14px}.best-metrics span{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}.best-metrics strong{font-size:20px}
 .simple-wrap{max-width:720px}.simple-table{min-width:0}.simple-table td{padding:14px;text-align:left}
 @media (max-width: 1200px){.page-shell{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.hero{grid-template-columns:1fr}.criteria-layout,.split-grid,.triple-grid,.best-card,.metric-grid.four{grid-template-columns:1fr}.content{padding:18px}.chart-row{grid-template-columns:1fr}.chart-row strong{text-align:left}}
+
+
+/* Matrix display: show all alternatives without changing any calculation logic */
+.matrix-wrap{
+  overflow:auto;
+  max-width:100%;
+  max-height:72vh;
+  border-radius:22px;
+  -webkit-overflow-scrolling:touch;
+}
+.matrix-table-wide{
+  min-width:max-content;
+  width:max-content;
+  table-layout:auto;
+}
+.matrix-table-wide th,
+.matrix-table-wide td{
+  white-space:nowrap;
+  min-width:120px;
+}
+.matrix-table-wide .sticky-col{
+  position:sticky;
+  left:0;
+  z-index:2;
+  min-width:220px;
+  box-shadow:8px 0 18px rgba(9,16,40,.08);
+}
+.matrix-table-wide thead .sticky-col{
+  z-index:3;
+}
+.matrix-table-wide tbody .sticky-col{
+  background:rgba(249,251,255,.98);
+}
+.alt-card .matrix-table-wide thead .sticky-col,
+.alt-card .matrix-table-wide thead th{
+  background:rgba(255,255,255,.04);
+}
+.alt-card .matrix-table-wide tbody .sticky-col{
+  background:rgba(255,255,255,.06);
+}
+.alt-card .matrix-table-wide .sticky-col{
+  box-shadow:8px 0 18px rgba(0,0,0,.18);
+}

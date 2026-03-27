@@ -12,7 +12,7 @@
             <div class="sidebar-top">
                 <p class="sidebar-eyebrow">DSS AHP + ML</p>
                 <h2>Cấu hình hệ thống</h2>
-                <p class="sidebar-desc">Giữ các bộ lọc ở thanh bên cho gọn màn hình. Khu vực chính chỉ tập trung nhập ma trận tiêu chí và xem kết quả theo đúng luồng tính toán.</p>
+                <p class="sidebar-desc">Nhập các thông tin bên dưới để xác định phạm vi chạy xếp hạng các phương án</p>
             </div>
 
             <form method="POST" id="mainForm" class="sidebar-form">
@@ -115,9 +115,10 @@
         <main class="content">
             <section class="hero">
                 <div>
-                    <p class="eyebrow">Luồng hiển thị từ trên xuống dưới</p>
-                    <h1>Nhập ma trận so sánh cặp tiêu chí ở màn hình chính</h1>
-                    <p class="hero-text">Thanh bên giữ các bộ lọc giống UI cũ. Vùng chính chỉ tập trung vào bước nhập ma trận tiêu chí và hiển thị kết quả theo đúng trình tự tính toán mà giảng viên yêu cầu.</p>
+                    <p class="eyebrow">HỆ HỖ TRỢ RA QUYẾT ĐỊNH</p>
+                    <h1>Hỗ trợ ra quyết định lựa chọn sản phẩm kinh doanh chủ lực</h1>
+                    <!--<p class="hero-text">Thanh bên giữ các bộ lọc giống UI cũ. Vùng chính chỉ tập trung vào bước nhập ma trận tiêu chí và hiển thị kết quả theo đúng trình tự tính toán mà giảng viên yêu cầu.</p>
+                -->
                 </div>
                 <div class="hero-tags">
                     <span>Ma trận tiêu chí</span>
@@ -270,7 +271,7 @@
                     <div>
                         <p class="eyebrow">Bước 3 • Ma trận phương án</p>
                         <h2>Ma trận phương án theo từng tiêu chí</h2>
-                        <p class="muted">Phần này bám theo UI cũ của bạn bạn: lấy các phương án tốt nhất từ kết quả backend để dựng ma trận theo từng tiêu chí.</p>
+                        <p class="muted">Lấy các phương án tốt nhất từ kết quả backend để dựng ma trận theo từng tiêu chí.</p>
                     </div>
                 </div>
 
@@ -378,22 +379,49 @@
                 <div class="table-wrap">
                     <table class="data-table result-table">
                         <thead>
-                            <tr>
-                                <th>Hạng</th><th>Phương án</th><th>Score</th><th>Doanh thu</th><th>Lợi nhuận</th><th>Sản lượng</th><th>Ổn định</th><th>Dự đoán 1 tháng</th><th>Dự đoán TB 3 tháng</th>
-                            </tr>
+<tr>
+    <th>Hạng</th>
+    <th>Phương án</th>
+    <th>Score</th>
+    <th>Doanh thu</th>
+    <th>Lợi nhuận</th>
+    <th>Sản lượng</th>
+    <th>Ổn định</th>
+    {% if form_data.horizon == '1m' %}
+        <th>Dự đoán 1 tháng</th>
+    {% elif form_data.horizon == '3m' %}
+        <th>Dự đoán TB 3 tháng</th>
+    {% endif %}
+</tr>
                         </thead>
                         <tbody>
                             {% for row in results %}
                             <tr class="{% if row.Rank == 1 %}top1{% elif row.Rank == 2 %}top2{% elif row.Rank == 3 %}top3{% endif %}">
                                 <td>{{ row.Rank }}</td>
                                 <td class="row-title">{{ row.SubCategory }}</td>
-                                <td>{{ '%.4f'|format(row.Score) }}</td>
+                                <!-- <td>{{ '%.4f'|format(row.Score) }}</td> -->
+                                <td>{{ '%.4f'|format(score_display_map.get(row.SubCategory, row.Score)) }}</td>
                                 <td>{{ '{:,.2f}'.format(row.Amount_total) }}</td>
                                 <td>{{ '{:,.2f}'.format(row.Profit_total) }}</td>
                                 <td>{{ '{:,.2f}'.format(row.Quantity_total) }}</td>
                                 <td>{{ '%.4f'|format(row.Stability) }}</td>
-                                <td>{% if row.Pred_Amount_1m is not none %}{{ '{:,.2f}'.format(row.Pred_Amount_1m) }}{% else %}-{% endif %}</td>
-                                <td>{% if row.Pred_Amount_3m_avg is not none %}{{ '{:,.2f}'.format(row.Pred_Amount_3m_avg) }}{% else %}-{% endif %}</td>
+                                {% if form_data.horizon == '1m' %}
+    <td>
+        {% if row.Pred_Amount_1m is not none %}
+            {{ '{:,.2f}'.format(row.Pred_Amount_1m) }}
+        {% else %}
+            -
+        {% endif %}
+    </td>
+{% elif form_data.horizon == '3m' %}
+    <td>
+        {% if row.Pred_Amount_3m_avg is not none %}
+            {{ '{:,.2f}'.format(row.Pred_Amount_3m_avg) }}
+        {% else %}
+            -
+        {% endif %}
+    </td>
+{% endif %}
                             </tr>
                             {% endfor %}
                         </tbody>

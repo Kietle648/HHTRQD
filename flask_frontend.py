@@ -190,6 +190,7 @@ def index() -> str:
     ml_note: Optional[str] = None
     ml_metrics: Dict[str, Any] = {}
     charts: Dict[str, List[Any]] = {"score_labels": [], "score_values": [], "pred_labels": [], "pred_values": []}
+    score_display_map: Dict[str, float] = {}
     current_products: List[str] = subcategories[:]
     criteria_status = {"ok": False, "label": "Chưa đánh giá"}
 
@@ -239,12 +240,29 @@ def index() -> str:
                 ml_note = ml.get("note")
                 ml_metrics = ml.get("metrics", {})
                 if results:
-                    alt_payload = build_alternative_analyses(results, max_items=min(4, len(results)))
+                    alt_payload = build_alternative_analyses(results, max_items=len(results))
                     best_option = sorted(results, key=lambda x: x.get("Rank", 999999))[0]
+
+                    # Tính lại Score hiển thị đúng theo file AHP:
+                    # Score(i) = sum( w_k * p_i,k )
+                    weight_map = {
+                        key: float(criteria_detail["weights"][idx])
+                        for idx, key in enumerate(CRITERIA_ORDER)
+                    }
+
+                    for row in alt_payload.get("summary_rows", []):
+                        score_display_map[str(row["SubCategory"])] = sum(
+                            float(row.get(key, 0.0) or 0.0) * weight_map[key]
+                            for key in CRITERIA_ORDER
+                        )
+
                     pred_key = "Pred_Amount_1m" if form_data["horizon"] == "1m" else "Pred_Amount_3m_avg"
                     charts = {
                         "score_labels": [str(r["SubCategory"]) for r in results],
-                        "score_values": [float(r.get("Score", 0.0) or 0.0) for r in results],
+                        "score_values": [
+                            score_display_map.get(str(r["SubCategory"]), float(r.get("Score", 0.0) or 0.0))
+                            for r in results
+                        ],
                         "pred_labels": [str(r["SubCategory"]) for r in results if r.get(pred_key) is not None],
                         "pred_values": [float(r.get(pred_key, 0.0) or 0.0) for r in results if r.get(pred_key) is not None],
                     }
@@ -272,6 +290,7 @@ def index() -> str:
         ml_note=ml_note,
         ml_metrics=ml_metrics,
         charts=charts,
+        score_display_map=score_display_map,
     )
 
 

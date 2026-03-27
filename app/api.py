@@ -257,7 +257,7 @@ def rank(req: RankRequest):
             "consistency": ahp_info
         },
         ml={
-            "note": "ML chỉ dùng tham khảo (không đưa vào AHP score).",
+            "note": "ML chỉ dùng tham khảo (không đưa vào AHP score). Độ sai lệch trung bình tuyệt đối:",
             "metrics": ml_metrics
         },
         results=items
