@@ -4,11 +4,14 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import requests
+import os
 from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-API_BASE = "http://127.0.0.1:8000"
+import os
+
+API_BASE = os.getenv("API_BASE", "http://127.0.0.1:8000")
 CRITERIA_ORDER = ["Amount_total", "Profit_total", "Quantity_total", "Stability"]
 CRITERIA_LABELS = {
     "Amount_total": "Doanh thu",

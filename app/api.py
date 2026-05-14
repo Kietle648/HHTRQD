@@ -13,9 +13,14 @@ from src.features import make_monthly_table, compute_criteria_table
 from src.ml import train_next_month_model, predict_3_months_ahead
 from src.ahp import ahp_weights
 from src.ranker import score_and_rank_ahp
+from pathlib import Path
+
+
+
 
 APP_TITLE = "DSS AHP + ML Backend"
-DATA_PATH = "data/raw/Sales Dataset.csv"
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_PATH = BASE_DIR / "data" / "raw" / "Sales Dataset.csv"
 
 app = FastAPI(title=APP_TITLE)
 
