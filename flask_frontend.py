@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+from urllib import response
 
 import numpy as np
-import requests
 import os
 from flask import Flask, render_template, request
+from app.api import meta as backend_meta
+from app.api import rank as backend_rank
+from app.api import RankRequest
 
 app = Flask(__name__)
 
 import os
 
-API_BASE = os.getenv("API_BASE", "http://127.0.0.1:8000")
 CRITERIA_ORDER = ["Amount_total", "Profit_total", "Quantity_total", "Stability"]
 CRITERIA_LABELS = {
     "Amount_total": "Doanh thu",
@@ -35,9 +37,7 @@ RI_TABLE = {
 
 def get_meta() -> Dict[str, Any]:
     try:
-        r = requests.get(f"{API_BASE}/meta", timeout=20)
-        r.raise_for_status()
-        return r.json()
+        return backend_meta()
     except Exception:
         return {
             "subcategories": [],
@@ -235,9 +235,9 @@ def index() -> str:
             if use_subcat_filter and selected_subcategories:
                 payload["subcategories"] = selected_subcategories
             try:
-                r = requests.post(f"{API_BASE}/rank", json=payload, timeout=120)
-                r.raise_for_status()
-                data = r.json()
+                req = RankRequest(**payload)
+                response = backend_rank(req)
+                data = response.model_dump()
                 results = data.get("results", [])
                 ml = data.get("ml", {})
                 ml_note = ml.get("note")
